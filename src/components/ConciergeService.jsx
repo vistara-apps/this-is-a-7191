@@ -1,306 +1,508 @@
 import React, { useState } from 'react';
-import { User, Clock, CheckCircle, MessageSquare } from 'lucide-react';
+import { Briefcase, Clock, CheckCircle, AlertTriangle, ChevronRight, MessageSquare, Search, Music } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import Button from './Button';
 import Input from './Input';
 import Modal from './Modal';
 
+/**
+ * ConciergeService component
+ * @returns {JSX.Element} - ConciergeService component
+ */
 const ConciergeService = () => {
+  const { user } = useAuth();
+  
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [requestForm, setRequestForm] = useState({
+    sampleArtist: '',
+    sampleTitle: '',
+    sampleLink: '',
+    projectName: '',
+    additionalInfo: '',
+  });
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
+  // Mock concierge requests
   const [requests, setRequests] = useState([
     {
-      id: 1,
-      title: "Clear Amen Break sample",
-      artist: "The Winstons",
-      status: "in_progress",
-      submittedDate: "2024-01-15",
-      priority: "high",
-      assignedAgent: "Sarah Johnson",
-      notes: "Contacted rights holder, awaiting response"
+      id: 'req1',
+      sampleArtist: 'Classic Soul Band',
+      sampleTitle: 'Summer Nights',
+      projectName: 'Urban Remix Project',
+      status: 'completed',
+      createdAt: '2024-01-15T12:00:00Z',
+      updatedAt: '2024-01-20T15:30:00Z',
+      messages: [
+        { id: 'msg1', sender: 'user', text: 'I need help clearing this sample for my upcoming release.', timestamp: '2024-01-15T12:00:00Z' },
+        { id: 'msg2', sender: 'agent', text: 'We\'ll start the clearance process right away. We\'ll contact the rights holders and negotiate terms.', timestamp: '2024-01-15T14:30:00Z' },
+        { id: 'msg3', sender: 'agent', text: 'Good news! We\'ve received approval from the rights holders. The license fee will be $250 with a 15% royalty rate.', timestamp: '2024-01-18T10:15:00Z' },
+        { id: 'msg4', sender: 'user', text: 'That sounds great! Please proceed with the license.', timestamp: '2024-01-18T11:45:00Z' },
+        { id: 'msg5', sender: 'agent', text: 'License has been finalized and added to your account. You can now use the sample in your project.', timestamp: '2024-01-20T15:30:00Z' },
+      ],
+      result: {
+        licenseObtained: true,
+        fee: 250,
+        royaltyRate: 15,
+        terms: 'Worldwide distribution, credit required',
+      },
     },
     {
-      id: 2,
-      title: "License James Brown - Funky Drummer",
-      artist: "James Brown",
-      status: "completed",
-      submittedDate: "2024-01-10",
-      priority: "medium",
-      assignedAgent: "Mike Chen",
-      notes: "License secured - $500 upfront + 15% royalty split"
+      id: 'req2',
+      sampleArtist: 'Jazz Quartet',
+      sampleTitle: 'Midnight Blues',
+      projectName: 'Electronic Fusion',
+      status: 'in_progress',
+      createdAt: '2024-01-25T09:45:00Z',
+      updatedAt: '2024-01-28T16:20:00Z',
+      messages: [
+        { id: 'msg1', sender: 'user', text: 'I want to use this jazz sample in my new electronic track.', timestamp: '2024-01-25T09:45:00Z' },
+        { id: 'msg2', sender: 'agent', text: 'Thanks for your request. We\'ll begin the process of identifying and contacting the rights holders.', timestamp: '2024-01-25T11:30:00Z' },
+        { id: 'msg3', sender: 'agent', text: 'We\'ve identified the rights holders and have sent them a clearance request. Waiting for their response.', timestamp: '2024-01-28T16:20:00Z' },
+      ],
     },
     {
-      id: 3,
-      title: "Clear vocal sample - Unknown artist",
-      artist: "Unknown",
-      status: "pending",
-      submittedDate: "2024-01-18",
-      priority: "low",
-      assignedAgent: null,
-      notes: "Pending assignment"
-    }
+      id: 'req3',
+      sampleArtist: 'Funk Masters',
+      sampleTitle: 'Groove City',
+      projectName: 'Hip Hop Collection',
+      status: 'pending',
+      createdAt: '2024-01-30T14:10:00Z',
+      updatedAt: '2024-01-30T14:10:00Z',
+      messages: [
+        { id: 'msg1', sender: 'user', text: 'Need to clear this funk sample for my hip hop album.', timestamp: '2024-01-30T14:10:00Z' },
+      ],
+    },
   ]);
 
-  const [showNewRequestModal, setShowNewRequestModal] = useState(false);
-  const [newRequest, setNewRequest] = useState({
-    title: '',
-    artist: '',
-    albumTitle: '',
-    year: '',
-    priority: 'medium',
-    notes: '',
-    audioFile: null
-  });
+  /**
+   * Handle input change for request form
+   * @param {Object} e - Event object
+   */
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setRequestForm(prev => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'completed': return 'text-green-600 bg-green-100';
-      case 'in_progress': return 'text-blue-600 bg-blue-100';
-      case 'pending': return 'text-yellow-600 bg-yellow-100';
-      default: return 'text-gray-600 bg-gray-100';
+  /**
+   * Submit concierge request
+   */
+  const submitRequest = async () => {
+    try {
+      setIsSubmitting(true);
+
+      // Validate form
+      if (!requestForm.sampleArtist || !requestForm.sampleTitle || !requestForm.projectName) {
+        alert('Please fill in all required fields.');
+        return;
+      }
+
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Create new request
+      const newRequest = {
+        id: `req${requests.length + 1}`,
+        sampleArtist: requestForm.sampleArtist,
+        sampleTitle: requestForm.sampleTitle,
+        sampleLink: requestForm.sampleLink,
+        projectName: requestForm.projectName,
+        additionalInfo: requestForm.additionalInfo,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        messages: [
+          {
+            id: `msg1`,
+            sender: 'user',
+            text: `I need help clearing "${requestForm.sampleTitle}" by ${requestForm.sampleArtist} for my project "${requestForm.projectName}".${requestForm.additionalInfo ? ` Additional info: ${requestForm.additionalInfo}` : ''}`,
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      };
+
+      // Add to requests
+      setRequests(prev => [newRequest, ...prev]);
+
+      // Reset form and close modal
+      setRequestForm({
+        sampleArtist: '',
+        sampleTitle: '',
+        sampleLink: '',
+        projectName: '',
+        additionalInfo: '',
+      });
+      setIsRequestModalOpen(false);
+    } catch (error) {
+      console.error('Submit request error:', error);
+      alert('Failed to submit request. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'completed': return <CheckCircle size={16} />;
-      case 'in_progress': return <Clock size={16} />;
-      default: return <Clock size={16} />;
-    }
+  /**
+   * View request details
+   * @param {Object} request - Request to view
+   */
+  const viewRequestDetails = (request) => {
+    setSelectedRequest(request);
+    setIsDetailsModalOpen(true);
   };
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'high': return 'text-red-600';
-      case 'medium': return 'text-yellow-600';
-      case 'low': return 'text-green-600';
-      default: return 'text-gray-600';
-    }
-  };
-
-  const handleSubmitRequest = () => {
-    const request = {
-      id: requests.length + 1,
-      title: newRequest.title,
-      artist: newRequest.artist,
-      status: 'pending',
-      submittedDate: new Date().toISOString().split('T')[0],
-      priority: newRequest.priority,
-      assignedAgent: null,
-      notes: 'Request submitted, pending review'
-    };
-    
-    setRequests([request, ...requests]);
-    setNewRequest({
-      title: '',
-      artist: '',
-      albumTitle: '',
-      year: '',
-      priority: 'medium',
-      notes: '',
-      audioFile: null
+  /**
+   * Format date
+   * @param {string} dateString - Date string
+   * @returns {string} - Formatted date
+   */
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
     });
-    setShowNewRequestModal(false);
+  };
+
+  /**
+   * Get status badge
+   * @param {string} status - Request status
+   * @returns {JSX.Element} - Status badge
+   */
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case 'completed':
+        return (
+          <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+            Completed
+          </span>
+        );
+      case 'in_progress':
+        return (
+          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+            In Progress
+          </span>
+        );
+      case 'pending':
+        return (
+          <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">
+            Pending
+          </span>
+        );
+      case 'failed':
+        return (
+          <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium">
+            Failed
+          </span>
+        );
+      default:
+        return (
+          <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs font-medium">
+            {status}
+          </span>
+        );
+    }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-8">
+      <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold text-text-primary">Concierge Service</h1>
-          <p className="text-text-secondary">Let our team handle sample clearance for you</p>
+          <h1 className="text-3xl font-bold text-text-primary mb-2">Concierge Service</h1>
+          <p className="text-text-secondary">Let our experts handle your sample clearance needs.</p>
         </div>
-        <Button variant="primary" onClick={() => setShowNewRequestModal(true)}>
+        <Button
+          onClick={() => setIsRequestModalOpen(true)}
+          className="flex items-center"
+        >
+          <Briefcase size={18} className="mr-2" />
           New Request
         </Button>
       </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-surface rounded-lg shadow-card p-4 text-center">
-          <div className="text-2xl font-bold text-text-primary">{requests.length}</div>
-          <div className="text-text-secondary text-sm">Total Requests</div>
-        </div>
-        <div className="bg-surface rounded-lg shadow-card p-4 text-center">
-          <div className="text-2xl font-bold text-blue-600">
-            {requests.filter(r => r.status === 'in_progress').length}
-          </div>
-          <div className="text-text-secondary text-sm">In Progress</div>
-        </div>
-        <div className="bg-surface rounded-lg shadow-card p-4 text-center">
-          <div className="text-2xl font-bold text-green-600">
-            {requests.filter(r => r.status === 'completed').length}
-          </div>
-          <div className="text-text-secondary text-sm">Completed</div>
-        </div>
-        <div className="bg-surface rounded-lg shadow-card p-4 text-center">
-          <div className="text-2xl font-bold text-accent">85%</div>
-          <div className="text-text-secondary text-sm">Success Rate</div>
-        </div>
-      </div>
-
-      {/* Request List */}
+      
+      {/* Service overview */}
       <div className="bg-surface rounded-lg shadow-card p-6">
-        <h2 className="text-lg font-semibold text-text-primary mb-4">Your Requests</h2>
-        <div className="space-y-4">
-          {requests.map((request) => (
-            <div key={request.id} className="border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-3">
-                  <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
-                    {getStatusIcon(request.status)}
-                    <span className="capitalize">{request.status.replace('_', ' ')}</span>
-                  </div>
-                  <span className={`text-sm font-medium ${getPriorityColor(request.priority)}`}>
-                    {request.priority.toUpperCase()} PRIORITY
-                  </span>
-                </div>
-                <span className="text-text-secondary text-sm">
-                  Submitted: {new Date(request.submittedDate).toLocaleDateString()}
-                </span>
-              </div>
-              
-              <div className="mb-3">
-                <h3 className="font-semibold text-text-primary">{request.title}</h3>
-                <p className="text-text-secondary">by {request.artist}</p>
-              </div>
-              
-              {request.assignedAgent && (
-                <div className="flex items-center space-x-2 mb-2">
-                  <User size={14} className="text-text-secondary" />
-                  <span className="text-sm text-text-secondary">
-                    Assigned to: {request.assignedAgent}
-                  </span>
-                </div>
-              )}
-              
-              <div className="flex items-center space-x-2 mb-3">
-                <MessageSquare size={14} className="text-text-secondary" />
-                <span className="text-sm text-text-secondary">{request.notes}</span>
-              </div>
-              
-              <div className="flex space-x-2">
-                <Button variant="secondary" size="sm">
-                  View Details
-                </Button>
-                {request.status === 'in_progress' && (
-                  <Button variant="secondary" size="sm">
-                    Message Agent
-                  </Button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* How It Works */}
-      <div className="bg-surface rounded-lg shadow-card p-6">
-        <h2 className="text-lg font-semibold text-text-primary mb-4">How It Works</h2>
+        <h2 className="text-xl font-bold text-text-primary mb-4">How Our Concierge Service Works</h2>
+        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center">
-            <div className="w-12 h-12 bg-accent text-white rounded-full flex items-center justify-center mx-auto mb-3 text-xl font-bold">
-              1
+          <div className="border border-gray-200 rounded-lg p-4">
+            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mb-3">
+              <Search size={18} className="text-blue-600" />
             </div>
-            <h3 className="font-medium text-text-primary mb-2">Submit Request</h3>
+            <h3 className="font-medium text-text-primary mb-2">1. Submit Your Request</h3>
             <p className="text-text-secondary text-sm">
-              Provide details about the sample you need cleared
+              Tell us which sample you need cleared and provide any relevant information.
             </p>
           </div>
-          <div className="text-center">
-            <div className="w-12 h-12 bg-accent text-white rounded-full flex items-center justify-center mx-auto mb-3 text-xl font-bold">
-              2
+          
+          <div className="border border-gray-200 rounded-lg p-4">
+            <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mb-3">
+              <MessageSquare size={18} className="text-purple-600" />
             </div>
-            <h3 className="font-medium text-text-primary mb-2">We Handle It</h3>
+            <h3 className="font-medium text-text-primary mb-2">2. We Handle Negotiations</h3>
             <p className="text-text-secondary text-sm">
-              Our experts research rights holders and negotiate terms
+              Our team identifies rights holders and negotiates license terms on your behalf.
             </p>
           </div>
-          <div className="text-center">
-            <div className="w-12 h-12 bg-accent text-white rounded-full flex items-center justify-center mx-auto mb-3 text-xl font-bold">
-              3
+          
+          <div className="border border-gray-200 rounded-lg p-4">
+            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mb-3">
+              <CheckCircle size={18} className="text-green-600" />
             </div>
-            <h3 className="font-medium text-text-primary mb-2">Get Licensed</h3>
+            <h3 className="font-medium text-text-primary mb-2">3. Get Your License</h3>
             <p className="text-text-secondary text-sm">
-              Receive your license agreement and use the sample legally
+              Once approved, we'll finalize the license and add it to your account.
             </p>
           </div>
         </div>
       </div>
-
-      {/* New Request Modal */}
+      
+      {/* Requests list */}
+      <div className="bg-surface rounded-lg shadow-card overflow-hidden">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-xl font-bold text-text-primary">Your Requests</h2>
+        </div>
+        
+        {requests.length > 0 ? (
+          <div className="divide-y divide-gray-200">
+            {requests.map((request) => (
+              <div
+                key={request.id}
+                className="p-6 hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h3 className="font-medium text-text-primary">{request.sampleTitle}</h3>
+                    <p className="text-text-secondary text-sm">By {request.sampleArtist}</p>
+                  </div>
+                  {getStatusBadge(request.status)}
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center text-text-secondary text-sm">
+                    <Clock size={14} className="mr-1" />
+                    <span>Requested on {formatDate(request.createdAt)}</span>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => viewRequestDetails(request)}
+                    className="flex items-center"
+                  >
+                    View Details
+                    <ChevronRight size={16} className="ml-1" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="p-6 text-center">
+            <p className="text-text-secondary mb-4">You don't have any concierge requests yet.</p>
+            <Button onClick={() => setIsRequestModalOpen(true)}>
+              Create Your First Request
+            </Button>
+          </div>
+        )}
+      </div>
+      
+      {/* New request modal */}
       <Modal
-        isOpen={showNewRequestModal}
-        onClose={() => setShowNewRequestModal(false)}
+        isOpen={isRequestModalOpen}
+        onClose={() => setIsRequestModalOpen(false)}
         title="New Concierge Request"
       >
         <div className="space-y-4">
-          <Input
-            label="Sample Title"
-            placeholder="e.g., Amen Break"
-            value={newRequest.title}
-            onChange={(e) => setNewRequest({...newRequest, title: e.target.value})}
-          />
-          
-          <Input
-            label="Original Artist"
-            placeholder="e.g., The Winstons"
-            value={newRequest.artist}
-            onChange={(e) => setNewRequest({...newRequest, artist: e.target.value})}
-          />
-          
-          <Input
-            label="Album Title (if known)"
-            placeholder="e.g., Amen, My Brother"
-            value={newRequest.albumTitle}
-            onChange={(e) => setNewRequest({...newRequest, albumTitle: e.target.value})}
-          />
-          
-          <Input
-            label="Year (if known)"
-            placeholder="e.g., 1969"
-            value={newRequest.year}
-            onChange={(e) => setNewRequest({...newRequest, year: e.target.value})}
-          />
-          
-          <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
-              Priority Level
-            </label>
-            <select
-              value={newRequest.priority}
-              onChange={(e) => setNewRequest({...newRequest, priority: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
-            >
-              <option value="low">Low - No rush</option>
-              <option value="medium">Medium - Standard timeline</option>
-              <option value="high">High - Urgent</option>
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
-              Additional Notes
-            </label>
-            <textarea
-              rows={3}
-              placeholder="Provide any additional context about the sample..."
-              value={newRequest.notes}
-              onChange={(e) => setNewRequest({...newRequest, notes: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Sample Artist"
+              name="sampleArtist"
+              value={requestForm.sampleArtist}
+              onChange={handleInputChange}
+              placeholder="e.g., James Brown"
+              required
+            />
+            <Input
+              label="Sample Title"
+              name="sampleTitle"
+              value={requestForm.sampleTitle}
+              onChange={handleInputChange}
+              placeholder="e.g., Funky Drummer"
+              required
             />
           </div>
           
-          <div className="flex space-x-2 pt-4">
-            <Button variant="primary" onClick={handleSubmitRequest} className="flex-1">
-              Submit Request
-            </Button>
-            <Button variant="secondary" onClick={() => setShowNewRequestModal(false)}>
-              Cancel
-            </Button>
+          <Input
+            label="Sample Link (optional)"
+            name="sampleLink"
+            value={requestForm.sampleLink}
+            onChange={handleInputChange}
+            placeholder="YouTube, Spotify, or other link to the sample"
+          />
+          
+          <Input
+            label="Your Project Name"
+            name="projectName"
+            value={requestForm.projectName}
+            onChange={handleInputChange}
+            placeholder="e.g., Summer Beats Album"
+            required
+          />
+          
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-1">
+              Additional Information (optional)
+            </label>
+            <textarea
+              name="additionalInfo"
+              value={requestForm.additionalInfo}
+              onChange={handleInputChange}
+              placeholder="Provide any additional details that might help with the clearance process..."
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+              rows={4}
+            />
           </div>
         </div>
+        
+        <div className="mt-6 flex justify-end space-x-3">
+          <Button
+            variant="secondary"
+            onClick={() => setIsRequestModalOpen(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={submitRequest}
+            loading={isSubmitting}
+          >
+            Submit Request
+          </Button>
+        </div>
+      </Modal>
+      
+      {/* Request details modal */}
+      <Modal
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+        title="Request Details"
+        size="lg"
+      >
+        {selectedRequest && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="font-bold text-text-primary text-lg">{selectedRequest.sampleTitle}</h3>
+                <p className="text-text-secondary">By {selectedRequest.sampleArtist}</p>
+              </div>
+              {getStatusBadge(selectedRequest.status)}
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-b border-gray-200 py-4">
+              <div>
+                <p className="text-text-secondary text-sm">Project</p>
+                <p className="font-medium text-text-primary">{selectedRequest.projectName}</p>
+              </div>
+              <div>
+                <p className="text-text-secondary text-sm">Requested On</p>
+                <p className="font-medium text-text-primary">{formatDate(selectedRequest.createdAt)}</p>
+              </div>
+              {selectedRequest.sampleLink && (
+                <div className="col-span-1 md:col-span-2">
+                  <p className="text-text-secondary text-sm">Sample Link</p>
+                  <a
+                    href={selectedRequest.sampleLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-accent hover:underline"
+                  >
+                    {selectedRequest.sampleLink}
+                  </a>
+                </div>
+              )}
+            </div>
+            
+            {/* Conversation */}
+            <div>
+              <h4 className="font-medium text-text-primary mb-3">Conversation</h4>
+              
+              <div className="space-y-4 max-h-80 overflow-y-auto p-1">
+                {selectedRequest.messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div className={`max-w-md rounded-lg p-3 ${
+                      message.sender === 'user'
+                        ? 'bg-accent text-white'
+                        : 'bg-gray-100 text-text-primary'
+                    }`}>
+                      <p className="text-sm">{message.text}</p>
+                      <p className={`text-xs mt-1 ${
+                        message.sender === 'user' ? 'text-white text-opacity-75' : 'text-text-secondary'
+                      }`}>
+                        {new Date(message.timestamp).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {selectedRequest.status !== 'completed' && (
+                <div className="mt-4">
+                  <div className="flex space-x-2">
+                    <input
+                      type="text"
+                      placeholder="Type your message..."
+                      className="flex-grow px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+                    />
+                    <Button>Send</Button>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Result (for completed requests) */}
+            {selectedRequest.status === 'completed' && selectedRequest.result && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-green-800">License Obtained</h3>
+                    <div className="mt-2 text-sm text-green-700 space-y-1">
+                      <p>
+                        <span className="font-medium">License Fee:</span> ${selectedRequest.result.fee}
+                      </p>
+                      <p>
+                        <span className="font-medium">Royalty Rate:</span> {selectedRequest.result.royaltyRate}%
+                      </p>
+                      <p>
+                        <span className="font-medium">Terms:</span> {selectedRequest.result.terms}
+                      </p>
+                    </div>
+                    <div className="mt-3">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                      >
+                        View License
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </Modal>
     </div>
   );
 };
 
 export default ConciergeService;
+

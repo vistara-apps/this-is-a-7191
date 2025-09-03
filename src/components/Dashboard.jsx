@@ -1,109 +1,195 @@
-import React, { useState } from 'react';
-import { Music, Shield, Briefcase, DollarSign, TrendingUp, Users } from 'lucide-react';
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { Music, Shield, Briefcase, DollarSign, ChevronRight, BarChart2, Users, Clock } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { useProjects } from '../context/ProjectContext';
+import { useSamples } from '../context/SampleContext';
+import { DashboardStatsSkeleton } from './common/SkeletonLoader';
+import Button from './Button';
 
-const Dashboard = () => {
-  const [stats] = useState({
-    totalLicenses: 24,
-    activeProjects: 8,
-    monthlyRevenue: 1250,
-    samplesCleared: 156,
-    recentActivity: [
-      { id: 1, type: 'license', title: 'Licensed "Funk Break 01"', time: '2h ago' },
-      { id: 2, type: 'verification', title: 'Track scan completed', time: '4h ago' },
-      { id: 3, type: 'royalty', title: 'Royalty payment received', time: '1d ago' },
-    ]
-  });
+/**
+ * Dashboard component
+ * @param {Object} props - Component props
+ * @returns {JSX.Element} - Dashboard component
+ */
+const Dashboard = ({ stats }) => {
+  const { user, hasPermission } = useAuth();
+  const { projects, isLoading: projectsLoading } = useProjects();
+  const { marketplaceSamples, isLoading: samplesLoading } = useSamples();
 
-  const StatCard = ({ icon: Icon, title, value, trend, color = 'accent' }) => (
-    <div className="bg-surface rounded-lg shadow-card p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className={`p-3 rounded-lg bg-${color} bg-opacity-10`}>
-          <Icon className={`h-6 w-6 text-${color}`} />
+  // Loading state
+  if (projectsLoading || samplesLoading) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold text-text-primary mb-2">Dashboard</h1>
+          <p className="text-text-secondary">Welcome back, {user?.firstName || 'User'}!</p>
         </div>
-        {trend && (
-          <div className="flex items-center text-green-600 text-sm">
-            <TrendingUp size={14} className="mr-1" />
-            +{trend}%
-          </div>
-        )}
+        
+        <DashboardStatsSkeleton />
       </div>
-      <h3 className="text-2xl font-bold text-text-primary mb-1">{value}</h3>
-      <p className="text-text-secondary text-sm">{title}</p>
-    </div>
+    );
+  }
+
+  // Dashboard stats
+  const dashboardStats = [
+    {
+      id: 'marketplace',
+      title: 'Sample Marketplace',
+      value: marketplaceSamples.length,
+      label: 'Available Samples',
+      icon: Music,
+      color: 'bg-blue-500',
+      path: '/marketplace',
+      permission: 'view_marketplace',
+    },
+    {
+      id: 'verification',
+      title: 'Sample Verification',
+      value: stats?.samplesCleared || 0,
+      label: 'Samples Cleared',
+      icon: Shield,
+      color: 'bg-green-500',
+      path: '/verification',
+      permission: 'view_verification',
+    },
+    {
+      id: 'concierge',
+      title: 'Concierge Service',
+      value: '24/7',
+      label: 'Support Available',
+      icon: Briefcase,
+      color: 'bg-purple-500',
+      path: '/concierge',
+      permission: 'use_concierge',
+    },
+    {
+      id: 'rights',
+      title: 'Rights Management',
+      value: `$${stats?.monthlyRevenue?.toFixed(2) || '0.00'}`,
+      label: 'Monthly Revenue',
+      icon: DollarSign,
+      color: 'bg-amber-500',
+      path: '/rights',
+      permission: 'manage_rights',
+    },
+  ];
+
+  // Filter stats based on user permissions
+  const filteredStats = dashboardStats.filter(stat => 
+    !stat.permission || hasPermission(stat.permission)
   );
 
   return (
-    <div className="space-y-6">
-      {/* Stats Grid */}
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold text-text-primary mb-2">Dashboard</h1>
+        <p className="text-text-secondary">Welcome back, {user?.firstName || 'User'}!</p>
+      </div>
+      
+      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          icon={Music}
-          title="Total Licenses"
-          value={stats.totalLicenses}
-          trend={12}
-          color="accent"
-        />
-        <StatCard
-          icon={Shield}
-          title="Active Projects"
-          value={stats.activeProjects}
-          trend={8}
-          color="green-500"
-        />
-        <StatCard
-          icon={DollarSign}
-          title="Monthly Revenue"
-          value={`$${stats.monthlyRevenue}`}
-          trend={15}
-          color="purple-500"
-        />
-        <StatCard
-          icon={Briefcase}
-          title="Samples Cleared"
-          value={stats.samplesCleared}
-          color="orange-500"
-        />
-      </div>
-
-      {/* Activity Feed */}
-      <div className="bg-surface rounded-lg shadow-card p-6">
-        <h2 className="text-lg font-semibold text-text-primary mb-4">Recent Activity</h2>
-        <div className="space-y-3">
-          {stats.recentActivity.map((activity) => (
-            <div key={activity.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-accent rounded-full"></div>
-                <span className="text-text-primary">{activity.title}</span>
+        {filteredStats.map((stat) => (
+          <div key={stat.id} className="bg-surface rounded-lg shadow-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className={`w-12 h-12 ${stat.color} rounded-lg flex items-center justify-center`}>
+                <stat.icon className="text-white" size={24} />
               </div>
-              <span className="text-text-secondary text-sm">{activity.time}</span>
+              <Link to={stat.path} className="text-accent hover:underline flex items-center">
+                <span className="text-sm">View</span>
+                <ChevronRight size={16} />
+              </Link>
             </div>
-          ))}
-        </div>
+            <h3 className="text-2xl font-bold text-text-primary mb-1">{stat.value}</h3>
+            <p className="text-text-secondary">{stat.label}</p>
+          </div>
+        ))}
       </div>
-
-      {/* Quick Actions */}
+      
+      {/* Recent Projects */}
       <div className="bg-surface rounded-lg shadow-card p-6">
-        <h2 className="text-lg font-semibold text-text-primary mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-4 border border-gray-200 rounded-lg hover:border-accent cursor-pointer transition-colors">
-            <Music className="h-6 w-6 text-accent mb-2" />
-            <h3 className="font-medium text-text-primary">Browse Samples</h3>
-            <p className="text-sm text-text-secondary">Find pre-cleared samples</p>
-          </div>
-          <div className="p-4 border border-gray-200 rounded-lg hover:border-accent cursor-pointer transition-colors">
-            <Shield className="h-6 w-6 text-accent mb-2" />
-            <h3 className="font-medium text-text-primary">Verify Track</h3>
-            <p className="text-sm text-text-secondary">Scan for uncleared samples</p>
-          </div>
-          <div className="p-4 border border-gray-200 rounded-lg hover:border-accent cursor-pointer transition-colors">
-            <Users className="h-6 w-6 text-accent mb-2" />
-            <h3 className="font-medium text-text-primary">Request Concierge</h3>
-            <p className="text-sm text-text-secondary">Get help with licensing</p>
-          </div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-text-primary">Recent Projects</h2>
+          <Link to="/rights">
+            <Button variant="outline" size="sm">
+              View All
+            </Button>
+          </Link>
         </div>
+        
+        {projects.length > 0 ? (
+          <div className="space-y-4">
+            {projects.slice(0, 3).map((project) => (
+              <div key={project.projectId} className="border border-gray-200 rounded-lg p-4">
+                <div className="flex justify-between mb-2">
+                  <h3 className="font-medium text-text-primary">{project.projectName}</h3>
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    project.status === 'active' ? 'bg-green-100 text-green-800' :
+                    project.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {project.status.charAt(0).toUpperCase() + project.status.slice(1)}
+                  </span>
+                </div>
+                <p className="text-sm text-text-secondary mb-3">{project.trackTitle}</p>
+                <div className="flex justify-between text-sm">
+                  <div className="flex items-center text-text-secondary">
+                    <Clock size={14} className="mr-1" />
+                    <span>Updated {new Date(project.updatedAt).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex items-center text-text-secondary">
+                    <Users size={14} className="mr-1" />
+                    <span>{project.collaborators.length} collaborators</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <p className="text-text-secondary mb-4">You don't have any projects yet.</p>
+            <Button>Create Your First Project</Button>
+          </div>
+        )}
+      </div>
+      
+      {/* Recent Activity */}
+      <div className="bg-surface rounded-lg shadow-card p-6">
+        <h2 className="text-xl font-bold text-text-primary mb-4">Recent Activity</h2>
+        
+        {stats?.recentActivity && stats.recentActivity.length > 0 ? (
+          <div className="space-y-4">
+            {stats.recentActivity.map((activity) => (
+              <div key={activity.id} className="flex items-start">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  activity.type === 'project' ? 'bg-blue-100 text-blue-600' :
+                  activity.type === 'license' ? 'bg-green-100 text-green-600' :
+                  'bg-gray-100 text-gray-600'
+                }`}>
+                  {activity.type === 'project' ? (
+                    <BarChart2 size={16} />
+                  ) : activity.type === 'license' ? (
+                    <Shield size={16} />
+                  ) : (
+                    <Clock size={16} />
+                  )}
+                </div>
+                <div className="ml-3">
+                  <p className="text-text-primary">{activity.title}</p>
+                  <p className="text-xs text-text-secondary">{activity.time}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <p className="text-text-secondary">No recent activity to display.</p>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
 export default Dashboard;
+
